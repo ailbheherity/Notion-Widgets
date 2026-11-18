@@ -286,6 +286,10 @@
       color: var(--notion-purple-muted);
     }
 
+    .countdown-meta.is-hidden {
+      display: none;
+    }
+
     .live-time-pill {
       font-family: var(--notion-mono);
       font-size: 10.5px;
@@ -298,10 +302,6 @@
       white-space: nowrap;
     }
 
-    .live-time-pill.is-hidden {
-      display: none;
-    }
-
     .target-badge {
       font-family: var(--notion-sans);
       font-size: 10.5px;
@@ -310,22 +310,80 @@
       white-space: nowrap;
     }
 
+    /* Mini Flip Cards Mode for Countdown */
+    .mini-flip-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 5px;
+      margin-top: 2px;
+    }
+
+    .mini-flip-row.is-hidden,
+    .countdown-subtitle.is-hidden {
+      display: none;
+    }
+
+    .mini-flip-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .mini-flip-card {
+      position: relative;
+      width: 30px;
+      height: 32px;
+      background: var(--notion-card);
+      border-radius: 5px;
+      box-shadow: 0 1px 3px var(--notion-shadow), 0 0 0 1px var(--notion-border);
+      font-family: var(--notion-mono);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--notion-purple);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .mini-flip-card::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(105, 64, 165, 0.16);
+    }
+
+    .mini-flip-label {
+      font-family: var(--notion-sans);
+      font-size: 7.5px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--notion-purple-muted);
+    }
+
     @media (max-width: 620px) {
       .target-badge {
         display: none;
       }
     }
 
-    /* Subtle Top-Right Utility Buttons */
+    /* Subtle Bottom-Right Utility Buttons (avoids Notion's top-right embed toolbar) */
     .utility-bar {
       position: absolute;
-      top: 7px;
-      right: 8px;
+      bottom: 8px;
+      right: 10px;
       display: flex;
       flex-direction: row;
       align-items: center;
       gap: 4px;
-      opacity: 0.42;
+      opacity: 0.45;
       transition: opacity 0.2s ease;
       z-index: 20;
     }
@@ -479,11 +537,11 @@
       background: #58338E;
     }
 
-    /* Toast Pill */
+    /* Toast Pill (bottom-left so it doesn't overlap bottom-right buttons) */
     .mini-toast {
       position: absolute;
       bottom: 8px;
-      right: 10px;
+      left: 10px;
       background: var(--notion-purple);
       color: #FFFFFF;
       font-size: 10.5px;
@@ -506,7 +564,7 @@
 <body>
 
   <main class="widget-shell" id="widgetShell">
-    <!-- Subtle Top-Right Controls -->
+    <!-- Subtle Bottom-Right Controls -->
     <div class="utility-bar">
       <button type="button" id="flipDemoBtn" class="icon-btn" title="Replay Flip Animation" aria-label="Replay Flip Animation">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -578,6 +636,24 @@
       <section class="countdown-section" aria-label="Countdown Timer">
         <h1 id="countdownTitleDisplay" class="countdown-title">countdown</h1>
         <p id="countdownStringDisplay" class="countdown-subtitle">10m 1w 5d 8h to go</p>
+        <div id="miniFlipRow" class="mini-flip-row is-hidden" aria-label="Countdown Flip Cards">
+          <div class="mini-flip-group">
+            <div class="mini-flip-card" id="mini-months">10</div>
+            <span class="mini-flip-label">MOS</span>
+          </div>
+          <div class="mini-flip-group">
+            <div class="mini-flip-card" id="mini-weeks">01</div>
+            <span class="mini-flip-label">WKS</span>
+          </div>
+          <div class="mini-flip-group">
+            <div class="mini-flip-card" id="mini-days">05</div>
+            <span class="mini-flip-label">DAYS</span>
+          </div>
+          <div class="mini-flip-group">
+            <div class="mini-flip-card" id="mini-hours">08</div>
+            <span class="mini-flip-label">HRS</span>
+          </div>
+        </div>
         <div class="countdown-meta" id="countdownMetaRow">
           <span id="liveTimePill" class="live-time-pill">03:32:00 PM</span>
           <span id="targetDateBadge" class="target-badge">Target: Sep 30, 2027</span>
@@ -591,7 +667,7 @@
         <div class="settings-fields">
           <label class="field-group">
             <span class="field-label">Title</span>
-            <input type="text" id="inputTitle" class="notion-input" style="width: 120px;" placeholder="countdown" maxlength="28" />
+            <input type="text" id="inputTitle" class="notion-input" style="width: 115px;" placeholder="countdown" maxlength="28" />
           </label>
 
           <label class="field-group">
@@ -599,9 +675,17 @@
             <input type="datetime-local" id="inputTargetDate" class="notion-input" />
           </label>
 
+          <label class="field-group">
+            <span class="field-label">Style</span>
+            <select id="inputStyle" class="notion-input">
+              <option value="text">Compact Text</option>
+              <option value="cards">Mini Flip Cards</option>
+            </select>
+          </label>
+
           <label class="checkbox-row">
-            <input type="checkbox" id="inputShowLiveTime" checked />
-            <span>Show live time</span>
+            <input type="checkbox" id="inputShowMeta" checked />
+            <span>Show live time & target</span>
           </label>
         </div>
 
@@ -618,7 +702,7 @@
 
   <script>
     (function () {
-      const STORAGE_KEY = 'notion_purple_flip_countdown_v2';
+      const STORAGE_KEY = 'notion_purple_flip_countdown_v3';
       const DAYS_SHORT = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
       const MONTHS_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -642,18 +726,33 @@
         const defaultConfig = {
           title: 'countdown',
           targetDate: getDefaultTargetISO(),
-          showLiveTime: true
+          displayStyle: 'text',
+          showMeta: true
         };
+
+        let merged = { ...defaultConfig };
 
         try {
           const saved = localStorage.getItem(STORAGE_KEY);
           if (saved) {
-            return { ...defaultConfig, ...JSON.parse(saved) };
+            merged = { ...merged, ...JSON.parse(saved) };
           }
         } catch (e) {
           // Ignore storage restrictions in sandboxed iframes
         }
-        return defaultConfig;
+
+        // Optional URL query parameter overrides (?title=...&target=...&style=...&meta=0)
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.has('title')) merged.title = params.get('title');
+          if (params.has('target')) merged.targetDate = params.get('target');
+          if (params.has('style')) merged.displayStyle = params.get('style') === 'cards' ? 'cards' : 'text';
+          if (params.has('meta')) merged.showMeta = params.get('meta') !== '0' && params.get('meta') !== 'false';
+        } catch (e) {
+          // Ignore URLSearchParams errors
+        }
+
+        return merged;
       }
 
       function saveConfig(cfg) {
@@ -787,35 +886,49 @@
         setFlipCardValue('card-day', pad2(now.getDate()));
         setFlipCardValue('card-year', String(now.getFullYear()).slice(-2));
 
-        // 2. Update Live Time Pill visibility & text
+        // 2. Toggle & Update Bottom Meta Line (Live Time Pill + Target Date)
+        const metaRow = document.getElementById('countdownMetaRow');
         const liveTimePill = document.getElementById('liveTimePill');
-        if (config.showLiveTime) {
-          liveTimePill.classList.remove('is-hidden');
+        const rem = computeRemaining(config.targetDate);
+
+        if (config.showMeta) {
+          metaRow.classList.remove('is-hidden');
           liveTimePill.textContent = now.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
             hour12: true
           });
+          document.getElementById('targetDateBadge').textContent = formatTargetShort(rem.target);
         } else {
-          liveTimePill.classList.add('is-hidden');
+          metaRow.classList.add('is-hidden');
         }
 
-        // 3. Update Countdown Title & String
+        // 3. Update Countdown Title & Display Style (Compact Text vs Mini Flip Cards)
         document.getElementById('countdownTitleDisplay').textContent = config.title || 'countdown';
-        const rem = computeRemaining(config.targetDate);
-        document.getElementById('targetDateBadge').textContent = formatTargetShort(rem.target);
-
         const stringDisplay = document.getElementById('countdownStringDisplay');
-        if (rem.expired) {
-          stringDisplay.textContent = 'Time reached!';
+        const miniFlipRow = document.getElementById('miniFlipRow');
+
+        if (config.displayStyle === 'cards' && !rem.expired) {
+          stringDisplay.classList.add('is-hidden');
+          miniFlipRow.classList.remove('is-hidden');
+          document.getElementById('mini-months').textContent = pad2(rem.months);
+          document.getElementById('mini-weeks').textContent = pad2(rem.weeks);
+          document.getElementById('mini-days').textContent = pad2(rem.days);
+          document.getElementById('mini-hours').textContent = pad2(rem.hours);
         } else {
-          const parts = [];
-          if (rem.months > 0) parts.push(`${rem.months}m`);
-          if (rem.weeks > 0 || rem.months > 0) parts.push(`${rem.weeks}w`);
-          parts.push(`${rem.days}d`);
-          parts.push(`${rem.hours}h`);
-          stringDisplay.textContent = `${parts.join(' ')} to go`;
+          miniFlipRow.classList.add('is-hidden');
+          stringDisplay.classList.remove('is-hidden');
+          if (rem.expired) {
+            stringDisplay.textContent = 'Time reached!';
+          } else {
+            const parts = [];
+            if (rem.months > 0) parts.push(`${rem.months}m`);
+            if (rem.weeks > 0 || rem.months > 0) parts.push(`${rem.weeks}w`);
+            parts.push(`${rem.days}d`);
+            parts.push(`${rem.hours}h`);
+            stringDisplay.textContent = `${parts.join(' ')} to go`;
+          }
         }
       }
 
@@ -829,7 +942,8 @@
       openSettingsBtn.addEventListener('click', () => {
         document.getElementById('inputTitle').value = config.title;
         document.getElementById('inputTargetDate').value = config.targetDate;
-        document.getElementById('inputShowLiveTime').checked = config.showLiveTime;
+        document.getElementById('inputStyle').value = config.displayStyle;
+        document.getElementById('inputShowMeta').checked = config.showMeta;
         settingsOverlay.classList.add('open');
         settingsOverlay.setAttribute('aria-hidden', 'false');
       });
@@ -844,7 +958,8 @@
         config = {
           title: document.getElementById('inputTitle').value.trim() || 'countdown',
           targetDate: document.getElementById('inputTargetDate').value || getDefaultTargetISO(),
-          showLiveTime: document.getElementById('inputShowLiveTime').checked
+          displayStyle: document.getElementById('inputStyle').value || 'text',
+          showMeta: document.getElementById('inputShowMeta').checked
         };
         saveConfig(config);
         settingsOverlay.classList.remove('open');
