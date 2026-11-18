@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notion Purple Flip Clock & Countdown Widget</title>
+  <style>
+    :root {
+      /* Notion Signature Soft Purple Palette */
+      --notion-bg: #F4F0F7;
+      --notion-card: #FFFFFF;
+      --notion-purple: #6940A5;
+      --notion-purple-sub: #7C58B3;
+      --notion-purple-muted: #9B82BE;
+      --notion-border: #E2D8EC;
+      --notion-shadow: rgba(105, 64, 165, 0.08);
+      --notion-mono: "iawriter-mono", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --notion-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+      font-family: var(--notion-sans);
+      color: var(--notion-purple);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Main Widget Container - strict horizontal row, never stacks */
+    .widget-shell {
+      width: 100%;
+      height: 100vh;
+      min-height: 110px;
+      max-height: 165px;
+      background-color: var(--notion-bg);
+      border: 1px solid var(--notion-border);
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      padding: 10px clamp(12px, 3vw, 28px);
+      overflow: hidden;
+    }
+
+    /* Inner Horizontal Layout */
+    .widget-layout {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: space-evenly;
+      gap: clamp(10px, 2.5vw, 32px);
+    }
+
+    /* Left Section: Split-Flap Current Date Clock */
+    .date-section {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .flip-row {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: clamp(5px, 1vw, 10px);
+    }
+
+    .flip-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .flip-label {
+      font-family: var(--notion-sans);
+      font-size: clamp(8px, 1.1vw, 9.5px);
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--notion-purple-muted);
+      line-height: 1;
+      user-select: none;
+    }
+
+    /* Fluid Split-Flap Card Dimensions using clamp() */
+    .flip-card {
+      position: relative;
+      width: clamp(44px, 6.2vw, 56px);
+      height: clamp(50px, 7.2vw, 62px);
+      background: var(--notion-card);
+      border-radius: 7px;
+      box-shadow: 0 2px 5px var(--notion-shadow), 0 0 0 1px var(--notion-border);
+      perspective: 600px;
+      font-family: var(--notion-mono);
+      font-weight: 700;
+      font-size: clamp(16px, 2.4vw, 22px);
+      letter-spacing: -0.02em;
+      color: var(--notion-purple);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .flip-card.wide {
+      width: clamp(52px, 7.6vw, 68px);
+    }
+
+    /* Top & Bottom Static Flaps */
+    .flap {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      overflow: hidden;
+      background: var(--notion-card);
+      display: flex;
+      justify-content: center;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .flap span {
+      position: absolute;
+      width: 100%;
+      height: 200%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .flap.top {
+      top: 0;
+      border-radius: 7px 7px 0 0;
+      background: linear-gradient(180deg, #FFFFFF 0%, #FAF7FC 100%);
+      border-bottom: 1px solid rgba(105, 64, 165, 0.14);
+      transform-origin: 50% 100%;
+      z-index: 1;
+    }
+
+    .flap.top span {
+      top: 0;
+    }
+
+    .flap.bottom {
+      bottom: 0;
+      border-radius: 0 0 7px 7px;
+      background: linear-gradient(180deg, #FBF9FD 0%, #FFFFFF 100%);
+      transform-origin: 50% 0%;
+      z-index: 1;
+    }
+
+    .flap.bottom span {
+      bottom: 0;
+    }
+
+    /* Center Mechanical Hinge Seam & Side Notches */
+    .flip-card::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(105, 64, 165, 0.18);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .hinge-left, .hinge-right {
+      position: absolute;
+      top: calc(50% - 2.5px);
+      width: 3px;
+      height: 5px;
+      background: var(--notion-border);
+      z-index: 6;
+      border-radius: 1px;
+    }
+    .hinge-left { left: 0; }
+    .hinge-right { right: 0; }
+
+    /* 3D Split-Flap Animation Keyframes */
+    .flap.flip-top-anim {
+      z-index: 3;
+      animation: flipTopDown 0.28s ease-in forwards;
+    }
+
+    .flap.flip-bottom-anim {
+      z-index: 4;
+      transform: rotateX(90deg);
+      animation: flipBottomDown 0.28s 0.26s ease-out forwards;
+    }
+
+    @keyframes flipTopDown {
+      0% {
+        transform: rotateX(0deg);
+        filter: brightness(1);
+      }
+      100% {
+        transform: rotateX(-90deg);
+        filter: brightness(0.92);
+      }
+    }
+
+    @keyframes flipBottomDown {
+      0% {
+        transform: rotateX(90deg);
+        filter: brightness(0.92);
+      }
+      100% {
+        transform: rotateX(0deg);
+        filter: brightness(1);
+      }
+    }
+
+    /* Vertical Divider */
+    .banner-divider {
+      width: 1px;
+      height: 64px;
+      background-color: var(--notion-border);
+      flex-shrink: 0;
+    }
+
+    /* Right Section: Notion Monospace Countdown Block */
+    .countdown-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-width: 0;
+      flex-shrink: 1;
+    }
+
+    .countdown-title {
+      font-family: var(--notion-mono);
+      font-size: clamp(16px, 2.3vw, 21px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--notion-purple);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .countdown-subtitle {
+      font-family: var(--notion-sans);
+      font-size: clamp(12px, 1.5vw, 14px);
+      font-weight: 400;
+      color: var(--notion-purple-sub);
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .countdown-meta {
+      margin-top: 7px;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 10.5px;
+      color: var(--notion-purple-muted);
+    }
+
+    .live-time-pill {
+      font-family: var(--notion-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--notion-purple);
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--notion-border);
+      border-radius: 999px;
+      padding: 2px 9px;
+      white-space: nowrap;
+    }
+
+    .live-time-pill.is-hidden {
+      display: none;
+    }
+
+    .target-badge {
+      font-family: var(--notion-sans);
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--notion-purple-muted);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 620px) {
+      .target-badge {
+        display: none;
+      }
+    }
+
+    /* Subtle Top-Right Utility Buttons */
+    .utility-bar {
+      position: absolute;
+      top: 7px;
+      right: 8px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.42;
+      transition: opacity 0.2s ease;
+      z-index: 20;
+    }
+
+    .widget-shell:hover .utility-bar,
+    .utility-bar:focus-within {
+      opacity: 1;
+    }
+
+    .icon-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--notion-purple);
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: #FFFFFF;
+      border-color: var(--notion-border);
+      box-shadow: 0 1px 3px var(--notion-shadow);
+    }
+
+    /* Compact Inline Settings Overlay (Strictly hidden until toggled) */
+    .settings-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(244, 240, 247, 0.98);
+      border-radius: 8px;
+      z-index: 30;
+      display: none;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+    }
+
+    .settings-overlay.open {
+      display: flex;
+    }
+
+    .settings-form {
+      width: 100%;
+      max-width: 780px;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .settings-fields {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .field-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--notion-purple-sub);
+    }
+
+    .notion-input {
+      background: #FFFFFF;
+      border: 1px solid var(--notion-border);
+      color: var(--notion-purple);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: var(--notion-sans);
+      font-size: 12px;
+      font-weight: 500;
+      outline: none;
+    }
+
+    .notion-input:focus {
+      border-color: var(--notion-purple);
+    }
+
+    .checkbox-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--notion-purple);
+      cursor: pointer;
+      padding-top: 12px;
+    }
+
+    .checkbox-row input {
+      accent-color: var(--notion-purple);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .settings-actions {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .btn-secondary {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--notion-border);
+      background: #FFFFFF;
+      color: var(--notion-purple);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: #FAF7FC;
+    }
+
+    .btn-primary {
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--notion-purple);
+      background: var(--notion-purple);
+      color: #FFFFFF;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #58338E;
+    }
+
+    /* Toast Pill */
+    .mini-toast {
+      position: absolute;
+      bottom: 8px;
+      right: 10px;
+      background: var(--notion-purple);
+      color: #FFFFFF;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(4px);
+      transition: all 0.2s ease;
+      z-index: 40;
+    }
+
+    .mini-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <main class="widget-shell" id="widgetShell">
+    <!-- Subtle Top-Right Controls -->
+    <div class="utility-bar">
+      <button type="button" id="flipDemoBtn" class="icon-btn" title="Replay Flip Animation" aria-label="Replay Flip Animation">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 16h5v5"/>
+        </svg>
+      </button>
+      <button type="button" id="openSettingsBtn" class="icon-btn" title="Customize Countdown" aria-label="Customize Countdown">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Main Single-Row Horizontal Banner -->
+    <div class="widget-layout">
+      <!-- LEFT: Mechanical Split-Flap Current Date Clock -->
+      <section class="date-section" aria-label="Current Date Flip Clock">
+        <div class="flip-row">
+          <div class="flip-group">
+            <div class="flip-card wide" id="card-dow">
+              <div class="hinge-left"></div>
+              <div class="hinge-right"></div>
+              <div class="flap top"><span>WED</span></div>
+              <div class="flap bottom"><span>WED</span></div>
+            </div>
+            <span class="flip-label">DAY</span>
+          </div>
+
+          <div class="flip-group">
+            <div class="flip-card wide" id="card-month">
+              <div class="hinge-left"></div>
+              <div class="hinge-right"></div>
+              <div class="flap top"><span>NOV</span></div>
+              <div class="flap bottom"><span>NOV</span></div>
+            </div>
+            <span class="flip-label">MONTH</span>
+          </div>
+
+          <div class="flip-group">
+            <div class="flip-card" id="card-day">
+              <div class="hinge-left"></div>
+              <div class="hinge-right"></div>
+              <div class="flap top"><span>18</span></div>
+              <div class="flap bottom"><span>18</span></div>
+            </div>
+            <span class="flip-label">DATE</span>
+          </div>
+
+          <div class="flip-group">
+            <div class="flip-card" id="card-year">
+              <div class="hinge-left"></div>
+              <div class="hinge-right"></div>
+              <div class="flap top"><span>26</span></div>
+              <div class="flap bottom"><span>26</span></div>
+            </div>
+            <span class="flip-label">YEAR</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Subtle Vertical Divider -->
+      <div class="banner-divider" role="separator"></div>
+
+      <!-- RIGHT: Notion Monospace Countdown Block -->
+      <section class="countdown-section" aria-label="Countdown Timer">
+        <h1 id="countdownTitleDisplay" class="countdown-title">countdown</h1>
+        <p id="countdownStringDisplay" class="countdown-subtitle">10m 1w 5d 8h to go</p>
+        <div class="countdown-meta" id="countdownMetaRow">
+          <span id="liveTimePill" class="live-time-pill">03:32:00 PM</span>
+          <span id="targetDateBadge" class="target-badge">Target: Sep 30, 2027</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Compact Inline Settings Overlay -->
+    <div class="settings-overlay" id="settingsOverlay" aria-hidden="true">
+      <form id="settingsForm" class="settings-form">
+        <div class="settings-fields">
+          <label class="field-group">
+            <span class="field-label">Title</span>
+            <input type="text" id="inputTitle" class="notion-input" style="width: 120px;" placeholder="countdown" maxlength="28" />
+          </label>
+
+          <label class="field-group">
+            <span class="field-label">Target Date & Time</span>
+            <input type="datetime-local" id="inputTargetDate" class="notion-input" />
+          </label>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="inputShowLiveTime" checked />
+            <span>Show live time</span>
+          </label>
+        </div>
+
+        <div class="settings-actions">
+          <button type="button" id="cancelSettingsBtn" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Subtle Notification Pill -->
+    <div class="mini-toast" id="miniToast">Saved</div>
+  </main>
+
+  <script>
+    (function () {
+      const STORAGE_KEY = 'notion_purple_flip_countdown_v2';
+      const DAYS_SHORT = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+      const MONTHS_SHORT = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+      function toLocalDatetimeInputValue(date) {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      }
+
+      // Default target: ~10 months, 1 week, 5 days, 8 hours ahead ("10m 1w 5d 8h to go")
+      function getDefaultTargetISO() {
+        const now = new Date();
+        const target = new Date(now.getTime());
+        target.setMonth(target.getMonth() + 10);
+        target.setDate(target.getDate() + 12);
+        target.setHours(target.getHours() + 8);
+        target.setMinutes(0, 0, 0);
+        return toLocalDatetimeInputValue(target);
+      }
+
+      function loadConfig() {
+        const defaultConfig = {
+          title: 'countdown',
+          targetDate: getDefaultTargetISO(),
+          showLiveTime: true
+        };
+
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            return { ...defaultConfig, ...JSON.parse(saved) };
+          }
+        } catch (e) {
+          // Ignore storage restrictions in sandboxed iframes
+        }
+        return defaultConfig;
+      }
+
+      function saveConfig(cfg) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg));
+        } catch (e) {
+          // Ignore storage restrictions
+        }
+      }
+
+      let config = loadConfig();
+      const cardValues = {};
+
+      function setFlipCardValue(cardId, newValue, forceAnimate = false) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+
+        const strVal = String(newValue);
+        const prevVal = cardValues[cardId];
+
+        if (prevVal === undefined) {
+          cardValues[cardId] = strVal;
+          const topSpan = card.querySelector('.flap.top span');
+          const bottomSpan = card.querySelector('.flap.bottom span');
+          if (topSpan) topSpan.textContent = strVal;
+          if (bottomSpan) bottomSpan.textContent = strVal;
+          return;
+        }
+
+        if (prevVal === strVal && !forceAnimate) {
+          return;
+        }
+
+        const oldVal = prevVal;
+        cardValues[cardId] = strVal;
+
+        card.querySelectorAll('.flip-top-anim, .flip-bottom-anim').forEach((el) => el.remove());
+
+        const staticTop = card.querySelector('.flap.top');
+        const staticBottom = card.querySelector('.flap.bottom');
+
+        staticTop.querySelector('span').textContent = strVal;
+        staticBottom.querySelector('span').textContent = oldVal;
+
+        const animTop = document.createElement('div');
+        animTop.className = 'flap top flip-top-anim';
+        animTop.innerHTML = `<span>${oldVal}</span>`;
+
+        const animBottom = document.createElement('div');
+        animBottom.className = 'flap bottom flip-bottom-anim';
+        animBottom.innerHTML = `<span>${strVal}</span>`;
+
+        card.appendChild(animTop);
+        card.appendChild(animBottom);
+
+        setTimeout(() => {
+          staticBottom.querySelector('span').textContent = strVal;
+          animTop.remove();
+          animBottom.remove();
+        }, 560);
+      }
+
+      function triggerCascadeFlip() {
+        const ids = ['card-dow', 'card-month', 'card-day', 'card-year'];
+        ids.forEach((id, idx) => {
+          setTimeout(() => {
+            if (cardValues[id] !== undefined) {
+              setFlipCardValue(id, cardValues[id], true);
+            }
+          }, idx * 75);
+        });
+      }
+
+      function computeRemaining(targetDateStr) {
+        const now = new Date();
+        const target = new Date(targetDateStr);
+
+        if (isNaN(target.getTime())) {
+          return { expired: false, months: 0, weeks: 0, days: 0, hours: 0, minutes: 0, target };
+        }
+
+        const diffMs = target.getTime() - now.getTime();
+        if (diffMs <= 0) {
+          return { expired: true, months: 0, weeks: 0, days: 0, hours: 0, minutes: 0, target };
+        }
+
+        let months = (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth());
+        const anchor = new Date(now.getTime());
+        anchor.setMonth(anchor.getMonth() + months);
+
+        if (anchor.getTime() > target.getTime()) {
+          months -= 1;
+          anchor.setTime(now.getTime());
+          anchor.setMonth(anchor.getMonth() + months);
+        }
+
+        const remAfterMonthsMs = Math.max(0, target.getTime() - anchor.getTime());
+        const remDaysTotal = Math.floor(remAfterMonthsMs / (1000 * 60 * 60 * 24));
+        const weeks = Math.floor(remDaysTotal / 7);
+        const days = remDaysTotal % 7;
+
+        const hours = Math.floor((diffMs / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((diffMs / (1000 * 60)) % 60);
+
+        return { expired: false, months, weeks, days, hours, minutes, target };
+      }
+
+      function formatTargetShort(date) {
+        if (isNaN(date.getTime())) return '';
+        const mon = date.toLocaleString('en-US', { month: 'short' });
+        return `Target: ${mon} ${date.getDate()}, ${date.getFullYear()}`;
+      }
+
+      function showToast(msg) {
+        const toast = document.getElementById('miniToast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+          toast.classList.remove('show');
+        }, 1800);
+      }
+
+      function updateWidget() {
+        const now = new Date();
+        const pad2 = (n) => String(n).padStart(2, '0');
+
+        // 1. Update 4 Date Flip Cards
+        setFlipCardValue('card-dow', DAYS_SHORT[now.getDay()]);
+        setFlipCardValue('card-month', MONTHS_SHORT[now.getMonth()]);
+        setFlipCardValue('card-day', pad2(now.getDate()));
+        setFlipCardValue('card-year', String(now.getFullYear()).slice(-2));
+
+        // 2. Update Live Time Pill visibility & text
+        const liveTimePill = document.getElementById('liveTimePill');
+        if (config.showLiveTime) {
+          liveTimePill.classList.remove('is-hidden');
+          liveTimePill.textContent = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+        } else {
+          liveTimePill.classList.add('is-hidden');
+        }
+
+        // 3. Update Countdown Title & String
+        document.getElementById('countdownTitleDisplay').textContent = config.title || 'countdown';
+        const rem = computeRemaining(config.targetDate);
+        document.getElementById('targetDateBadge').textContent = formatTargetShort(rem.target);
+
+        const stringDisplay = document.getElementById('countdownStringDisplay');
+        if (rem.expired) {
+          stringDisplay.textContent = 'Time reached!';
+        } else {
+          const parts = [];
+          if (rem.months > 0) parts.push(`${rem.months}m`);
+          if (rem.weeks > 0 || rem.months > 0) parts.push(`${rem.weeks}w`);
+          parts.push(`${rem.days}d`);
+          parts.push(`${rem.hours}h`);
+          stringDisplay.textContent = `${parts.join(' ')} to go`;
+        }
+      }
+
+      // Settings Wiring
+      const settingsOverlay = document.getElementById('settingsOverlay');
+      const openSettingsBtn = document.getElementById('openSettingsBtn');
+      const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+      const settingsForm = document.getElementById('settingsForm');
+      const flipDemoBtn = document.getElementById('flipDemoBtn');
+
+      openSettingsBtn.addEventListener('click', () => {
+        document.getElementById('inputTitle').value = config.title;
+        document.getElementById('inputTargetDate').value = config.targetDate;
+        document.getElementById('inputShowLiveTime').checked = config.showLiveTime;
+        settingsOverlay.classList.add('open');
+        settingsOverlay.setAttribute('aria-hidden', 'false');
+      });
+
+      cancelSettingsBtn.addEventListener('click', () => {
+        settingsOverlay.classList.remove('open');
+        settingsOverlay.setAttribute('aria-hidden', 'true');
+      });
+
+      settingsForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        config = {
+          title: document.getElementById('inputTitle').value.trim() || 'countdown',
+          targetDate: document.getElementById('inputTargetDate').value || getDefaultTargetISO(),
+          showLiveTime: document.getElementById('inputShowLiveTime').checked
+        };
+        saveConfig(config);
+        settingsOverlay.classList.remove('open');
+        settingsOverlay.setAttribute('aria-hidden', 'true');
+        updateWidget();
+        triggerCascadeFlip();
+        showToast('Saved');
+      });
+
+      flipDemoBtn.addEventListener('click', triggerCascadeFlip);
+
+      updateWidget();
+      setTimeout(triggerCascadeFlip, 350);
+      setInterval(updateWidget, 1000);
+    })();
+  </script>
+</body>
+</html>
